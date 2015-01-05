@@ -2,11 +2,25 @@
 title: "Evaluation of the performance of sums of weight for variable selection"
 author: "Erik Askov Mousing"
 date: "Monday, January 05, 2015"
-output: html_document
-bibliography: bibliography.bib
+output:
+  html_document: default
 csl: elsevier-harvard.csl
+bibliography: bibliography.bib
 ---
 
+```{r, echo=FALSE}
+# Setup
+
+
+
+```
+
+# Introduction
+
+# Exploratory data analysis
+
 This is a citation [@mousing2014]
+
+
 
 # References
