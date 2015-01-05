@@ -1,0 +1,12 @@
+---
+title: "Evaluation of the performance of sums of weight for variable selection"
+author: "Erik Askov Mousing"
+date: "Monday, January 05, 2015"
+output: html_document
+bibliography: bibliography.bib
+csl: elsevier-harvard.csl
+---
+
+This is a citation [@mousing2014]
+
+# References
