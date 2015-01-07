@@ -9,8 +9,10 @@
 
 library(mvtnorm)
 library(MuMIn)
+library(vegan)
+library(parallel)
 
-data.simulation <- function(sample.size=100, precision=0.1)
+data.simulation <- function(sample.size=100)
 {
   # sample.size: set the number of observations in the data set
   corr_xi_xj = 0 # expected correlation coefficient between independent variables
@@ -32,41 +34,66 @@ data.simulation <- function(sample.size=100, precision=0.1)
 dat <- data.simulation(1000)
 #pairs(dat)
 
+# Generate 1000 simulated data sets
+
+resultlis <- list()
+for(i in 1:1000)
+{
+  resultlis[[i]] = data.simulation(1000)
+}
+
+dat <- resultlis[[1]]
+
 # Generate SW0 (SW baseline distribution)
 
-permutation_nb <- 1000
-perm_weight <- numeric()
+cl <- makeCluster(3)
+permlis <- list()
 
-for(i in 1:permutation_nb)
+for(i in 1:100)
 {
-  dat$ys <- sample(dat$y)
-  reg1 <- lm(ys ~ x1 + x2 + x3 + x4, data = dat, na.action = "na.fail")
-  ms1 <- dredge(reg1)
-  confset1 <- get.models(ms1, subset = NA)
-  avgmod1 <- model.avg(confset1)
-  perm_weight[i] = summary(avgmod1)$importance["x1"]
-  cat(round(100*i/permutation_nb,2), "% \n")
+  dat <- resultlis[[i]]
+  clusterExport(cl, "dat") # add data to slave processes
+  clusterEvalQ(cl=cl, library(MuMIn)) # add package to slave processes
+  permutation_nb <- 1000 # number of iteration in SW0 generation
+  permlis[[i]] <- parSapply(cl, 1:permutation_nb, function(i)
+  {
+    dat$ys <- sample(dat$y)
+    reg1 <- lm(ys ~ x1 + x2 + x3 + x4, data = dat, na.action = "na.fail")
+    ms1 <- dredge(reg1)
+    confset1 <- get.models(ms1, subset = NA)
+    avgmod1 <- model.avg(confset1)
+    summary(avgmod1)$importance["x1"]
+  }
+  )
+  cat(round(100*i/1000, 2), "% \n")
   flush.console()
 }
+
+stopCluster(cl)
 
 # Model selection using SWs
 
 reg <- lm(y ~ x1 + x2 + x3 + x4, data = dat, na.action = "na.fail")
 ms <- dredge(reg, extra = "adjR^2")
+ms
 
 # Compare
+perm_weight <- permlis[[2]]
 
 quantile(perm_weight, probs = 0.95)
 summary(model.avg(get.models(ms, subset = NA)))$importance["x1"]
 summary(model.avg(get.models(ms, subset = NA)))$importance["x2"]
 summary(model.avg(get.models(ms, subset = NA)))$importance["x3"]
 summary(model.avg(get.models(ms, subset = NA)))$importance["x4"]
-summary(reg)
 
+#summary(reg)
 
 
 varpart(dat$y, dat$x1, dat$x2, dat$x3, dat$x4)
+#plot(varpart(dat$y, dat$x1, dat$x2, dat$x3, dat$x4))
 
-
-
+anova.cca(rda(dat$y, dat$x1, cbind(dat$x2, dat$x3, dat$x4)), step = 1000)
+anova.cca(rda(dat$y, dat$x2, cbind(dat$x1, dat$x3, dat$x4)), step = 1000)
+anova.cca(rda(dat$y, dat$x3, cbind(dat$x1, dat$x2, dat$x4)), step = 1000)
+anova.cca(rda(dat$y, dat$x4, cbind(dat$x1, dat$x2, dat$x3)), step = 1000)
 
